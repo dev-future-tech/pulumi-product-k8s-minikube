@@ -1,0 +1,22 @@
+= Setup of the local system
+:version: 1.0.0
+:author: Anthony Ikeda <anthony.ikeda@gmail.com>
+
+== Quick Read
+
+. Set up pulummi to connect to your backend
+. Configure Postgres
+.. Create a Role: `create role pulumi_admin with login createdb createrole password 'letmeconfigure';`
+.. Create a Group: `create group devops with user pulumi_admin;`
+
+User should now be able to login with:
+
+
+
+[source,bash]
+----
+$ psql -U pulumi_admin -W product_db
+Password: 
+product_db=> 
+----
+

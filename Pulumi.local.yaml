@@ -1,0 +1,18 @@
+encryptionsalt: v1:GfDJgbs9ygo=:v1:0Hu6iQYd2YGkpn88:rApJXyDVo1xfjTVX9/Aj6Hpv97zRzQ==
+config:
+  postgresql:host: localhost
+  postgresql:password:
+    secure: v1:bDlkK2sy8yN6K3hU:fbSrpT9vhGsyk8ThkXvmFiwFM6fIIAUkObP1V8F2
+  postgresql:sslmode: disable
+  postgresql:superuser: "false"
+  postgresql:username: pulumi_admin
+  pulumi-product-k8s-minikube:db_url: jdbc:postgresql://host.minikube.internal:5432/product_database
+  pulumi-product-k8s-minikube:db_user_name: product_admin_user
+  pulumi-product-k8s-minikube:db_user_password:
+    secure: v1:OROJC97jZScnB+VT:czn90Q89Fx2kNAdr00t2lp5Of+PB5Ls=
+  pulumi-product-k8s-minikube:rabbitmq_host: host.minikube.internal
+  rabbitmq:endpoint: http://localhost:15672
+  rabbitmq:password:
+    secure: v1:+srK98CD9QEcGkNB:x3+XrWT5Z2+sggrCfeww3MWgtn0H
+  rabbitmq:username:
+    secure: v1:SkdMFm8XYzpG2/CC:qj0U6+ktW4DDHAcF6XKbo1jQIK3q

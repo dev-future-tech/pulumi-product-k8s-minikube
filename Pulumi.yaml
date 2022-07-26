@@ -1,0 +1,5 @@
+name: pulumi-product-k8s-minikube
+runtime: nodejs
+description: A minimal Kubernetes TypeScript Pulumi program
+backend:
+  url: "s3://pulumistate?endpoint=localhost:9000&disableSSL=true&s3ForcePathStyle=true"
