@@ -73,7 +73,8 @@ const user = new postgresql.Role("product_admin_user", {
     createDatabase: true,
     login: true,
     name: config.require("db_user_name"),
-    password: config.requireSecret("db_user_password")
+    password: config.requireSecret("db_user_password"),
+
 });
 
 const readonlyTables = new postgresql.Grant("product_tables", {
@@ -88,7 +89,10 @@ const readonlyTables = new postgresql.Grant("product_tables", {
 
 const productNamespace = new k8s.core.v1.Namespace("product-ns", {
     metadata: {
-        name: "product-ns-dev"
+        name: "product-ns-dev",
+        labels: {
+            "istio-injection": "enabled"
+        }
     }
 });
 
@@ -113,6 +117,15 @@ const productConfigMap = new k8s.core.v1.ConfigMap("product-api-config", {
 });
 
 const appLabels = { app: "product-api" };
+const serviceAccountLabels = { account: "product-api" }
+
+const productApiServiceAccount = new k8s.core.v1.ServiceAccount("product-api-sa", {
+    metadata: {
+        name: "product-api-sa",
+        labels: serviceAccountLabels,
+        namespace: productNamespace.metadata.name
+    }
+});
 
 const deployment = new k8s.apps.v1.Deployment("product-api", {
     metadata: {
@@ -129,6 +142,7 @@ const deployment = new k8s.apps.v1.Deployment("product-api", {
                 name: "product-api"
             },
             spec: {
+                serviceAccountName: productApiServiceAccount.metadata.name,
                 containers: [
                     {
                         name: "product-sidecar",
@@ -144,8 +158,8 @@ const deployment = new k8s.apps.v1.Deployment("product-api", {
                             }
                         },
                         ports: [
-                            { containerPort: 7080, name: "web" },
-                            { containerPort: 7081, name: "actuator" }
+                            { containerPort: 7080, name: "sc-web" },
+                            { containerPort: 7081, name: "sc-actuator" }
                         ],
                         imagePullPolicy: "IfNotPresent",
                         readinessProbe: {
@@ -181,8 +195,8 @@ const deployment = new k8s.apps.v1.Deployment("product-api", {
                             }
                         },
                         ports: [
-                            { containerPort: 8090, name: "web" },
-                            { containerPort: 8091, name: "actuator" }
+                            { containerPort: 8090, name: "api-web" },
+                            { containerPort: 8091, name: "api-actuator" }
                         ],
                         imagePullPolicy: "IfNotPresent",
                         readinessProbe: {
@@ -269,3 +283,77 @@ const deployment = new k8s.apps.v1.Deployment("product-api", {
     }
 });
 
+const service = new k8s.core.v1.Service("product-api-svc", {
+    metadata: {
+        namespace: productNamespace.metadata.name
+    },
+    spec: {
+        type: "NodePort",
+        ports: [
+            {
+                port: 80,
+                protocol: "TCP",
+                nodePort: 30001,
+                targetPort: 8090,
+            }
+        ],
+        selector: {
+            app: "product-api",
+        },
+    }
+});
+
+
+const gateway = new k8s.apiextensions.CustomResource("istioGateway", {
+    kind: "Gateway",
+    apiVersion: "networking.istio.io/v1alpha3",
+    metadata: {
+        name: "product-api-gateway",
+        namespace: productNamespace.metadata.name,
+    },
+    spec: {
+        selector: {
+            istio: "ingressgateway"
+        },
+        servers: [
+            {
+                port: {
+                    number: 80,
+                    name: "http",
+                    protocol: "HTTP"
+                },
+                hosts: [ "*" ]
+            }
+        ]
+    }
+});
+
+const virtualService = new k8s.apiextensions.CustomResource("istoVirtualService", {
+    kind: "VirtualService",
+    apiVersion: "networking.istio.io/v1alpha3",
+    metadata: {
+        name: "productinfo",
+        namespace: productNamespace.metadata.name,
+    },
+    spec: {
+        hosts: [ "*" ],
+        gateways: ["product-api-gateway"],
+        http: [
+            {
+                match: [
+                    { uri: { exact: "/product/v1" }}
+                ],
+                route: [
+                    {
+                        destination: {
+                            host: service.metadata.name,
+                            port: {
+                                number: 80
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+});
